@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOFZeta - Ln-MOF Surface Zeta Potential Predictor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#6366F1',     // 靛蓝色作为主色调
+                        secondary: '#06B6D4',   // 青蓝色作为辅助色
+                        accent: '#EC4899',      // 粉色作为强调色
+                        dark: '#0F172A',        // 深蓝黑色背景
+                        'dark-light': '#1E293B', // 较浅的深色背景
+                        neon: '#818CF8',        // 霓虹紫色
+                    },
+                    fontFamily: {
+                        orbitron: ['Orbitron', 'sans-serif'],
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .text-glow {
+                text-shadow: 0 0 8px theme('colors.neon'), 0 0 16px theme('colors.neon/70');
+            }
+            .bg-glass {
+                background: rgba(15, 23, 42, 0.85);
+                backdrop-filter: blur(12px);
+            }
+            .neon-border {
+                position: relative;
+                z-index: 1;
+            }
+            .neon-border::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                border: 1px solid theme('colors.neon/50');
+                border-radius: inherit;
+                z-index: -1;
+                opacity: 0;
+                transition: opacity 0.5s ease, transform 0.5s ease;
+            }
+            .neon-border:hover::before {
+                opacity: 1;
+                transform: scale(1.05);
+            }
+            .neon-pulse {
+                animation: neonPulse 2s infinite alternate;
+            }
+            @keyframes neonPulse {
+                0% { box-shadow: 0 0 5px theme('colors.neon/50'), 0 0 10px theme('colors.neon/30'); }
+                100% { box-shadow: 0 0 15px theme('colors.neon'), 0 0 30px theme('colors.neon/70'); }
+            }
+            .float-animation {
+                animation: float 6s ease-in-out infinite;
+            }
+            @keyframes float {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-15px); }
+            }
+            .card-hover {
+                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            }
+            .card-hover:hover {
+                transform: translateY(-8px);
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            }
+        }
+    </style>
+</head>
+<body class="font-inter bg-dark text-gray-100 min-h-screen flex flex-col overflow-x-hidden">
+    <!-- 粒子背景 -->
+    <div id="particles-js" class="fixed inset-0 z-0 opacity-20"></div>
+    
+    <!-- 导航栏 -->
+    <nav class="bg-glass fixed top-0 left-0 right-0 z-50 transition-all duration-300" id="navbar">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-2">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center neon-border neon-pulse">
+                        <i class="fa fa-flask text-neon text-xl"></i>
+                    </div>
+                    <a href="#" class="text-2xl font-orbitron font-semibold text-white">
+                        MOF<span class="text-neon text-glow">Zeta</span>
+                    </a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="chinese.html" class="px-3 py-2 rounded-md text-sm font-medium text-neon hover:text-white transition-colors duration-200 flex items-center group">
+                        <i class="fa fa-language mr-1 group-hover:rotate-12 transition-transform duration-300"></i>
+                        <span>中文</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-24 relative z-10">
+        <!-- 英雄区 -->
+        <section class="mb-16 text-center" id="hero">
+            <h1 class="text-[clamp(2.5rem,8vw,4.5rem)] font-orbitron font-bold mb-6 text-white">
+                Ln-MOF <span class="text-neon text-glow">Surface Zeta</span> Potential Predictor
+            </h1>
+            <p class="text-[clamp(1rem,3vw,1.5rem)] text-gray-300 max-w-3xl mx-auto mb-8">
+                Advanced computational tool for predicting zeta potential of lanthanide metal-organic frameworks
+            </p>
+            <div class="flex flex-wrap justify-center gap-4 mt-8">
+                <a href="#calculator" class="px-8 py-3 bg-gradient-to-r from-primary to-secondary text-white font-medium rounded-lg neon-border flex items-center justify-center btn-hover">
+                    <i class="fa fa-calculator mr-2"></i> 
+                    <span class="relative">
+                        Start Calculation
+                        <span class="absolute -bottom-1 left-0 w-full h-0.5 bg-neon opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                    </span>
+                </a>
+                <a href="#model" class="px-8 py-3 bg-dark-light border border-neon/30 text-white font-medium rounded-lg hover:bg-neon/10 transition-all duration-300 flex items-center justify-center">
+                    <i class="fa fa-info-circle mr-2"></i> 
+                    Model Details
+                </a>
+            </div>
+        </section>
+
+        <!-- 计算器区 -->
+        <section id="calculator" class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
+            <!-- 输入表单卡片 -->
+            <div class="bg-dark-light rounded-2xl p-6 md:p-8 card-hover neon-border">
+                <h2 class="text-2xl font-orbitron font-semibold mb-6 flex items-center">
+                    <i class="fa fa-calculator text-neon mr-3"></i> Input Parameters
+                </h2>
+                <form id="zeta-calculator" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label for="carboxyl" class="block text-sm font-medium text-gray-300">
+                                Carboxyl Group Count (C)
+                            </label>
+                            <div class="relative">
+                                <input type="number" id="carboxyl" name="carboxyl" min="0" step="1" required
+                                    class="w-full px-4 py-3 bg-dark border border-neon/20 rounded-lg focus:border-neon focus:ring-2 focus:ring-neon/30 outline-none transition-all duration-300"
+                                    placeholder="0">
+                                <div class="absolute right-3 top-1/2 -translate-y-1/2 text-neon/50">
+                                    <i class="fa fa-carrot"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label for="amino" class="block text-sm font-medium text-gray-300">
+                                Amino Group Count (A)
+                            </label>
+                            <div class="relative">
+                                <input type="number" id="amino" name="amino" min="0" step="1" required
+                                    class="w-full px-4 py-3 bg-dark border border-neon/20 rounded-lg focus:border-neon focus:ring-2 focus:ring-neon/30 outline-none transition-all duration-300"
+                                    placeholder="0">
+                                <div class="absolute right-3 top-1/2 -translate-y-1/2 text-neon/50">
+                                    <i class="fa fa-amazon"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label for="benzene" class="block text-sm font-medium text-gray-300">
+                                Benzene Ring Count (B)
+                            </label>
+                            <div class="relative">
+                                <input type="number" id="benzene" name="benzene" min="0" step="1" required
+                                    class="w-full px-4 py-3 bg-dark border border-neon/20 rounded-lg focus:border-neon focus:ring-2 focus:ring-neon/30 outline-none transition-all duration-300"
+                                    placeholder="0">
+                                <div class="absolute right-3 top-1/2 -translate-y-1/2 text-neon/50">
+                                    <i class="fa fa-circle-o-notch"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label for="esp" class="block text-sm font-medium text-gray-300">
+                                ESP Difference (E) (eV)
+                            </label>
+                            <div class="relative">
+                                <input type="number" id="esp" name="esp" min="0" step="0.01" required
+                                    class="w-full px-4 py-3 bg-dark border border-neon/20 rounded-lg focus:border-neon focus:ring-2 focus:ring-neon/30 outline-none transition-all duration-300"
+                                    placeholder="0.00">
+                                <div class="absolute right-3 top-1/2 -translate-y-1/2 text-neon/50">
+                                    <i class="fa fa-bolt"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-2">
+                        <button type="submit" class="w-full bg-gradient-to-r from-primary to-secondary text-white font-medium py-3 px-6 rounded-lg neon-border flex items-center justify-center btn-hover">
+                            <i class="fa fa-magic mr-3"></i>
+                            <span>Calculate Zeta Potential</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 结果卡片 -->
+            <div class="bg-dark-light rounded-2xl p-6 md:p-8 card-hover neon-border" id="results-card">
+                <h2 class="text-2xl font-orbitron font-semibold mb-6 flex items-center">
+                    <i class="fa fa-bar-chart text-neon mr-3"></i> Results
+                </h2>
+                
+                <div id="result-placeholder" class="flex flex-col items-center justify-center py-12 text-center">
+                    <div class="w-20 h-20 rounded-full bg-neon/20 flex items-center justify-center mb-6 pulse">
+                        <i class="fa fa-flask text-neon text-3xl"></i>
+                    </div>
+                    <p class="text-gray-400 text-lg">
+                        Enter parameters and calculate to see results
+                    </p>
+                </div>
+                
+                <div id="result-content" class="hidden">
+                    <div class="mb-8">
+                        <h3 class="text-xl font-orbitron font-semibold mb-4 flex items-center">
+                            <i class="fa fa-magnet text-neon mr-2"></i> Zeta Potential Prediction
+                        </h3>
+                        <div class="flex items-center justify-center">
+                            <div class="text-center p-6 bg-dark rounded-2xl border border-neon/30 relative overflow-hidden">
+                                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-secondary"></div>
+                                <div class="text-4xl font-bold mb-2" id="zeta-value">0.00 mV</div>
+                                <div class="text-sm text-neon/80" id="result-interpretation">Neutral Surface</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-8">
+                        <h3 class="text-xl font-orbitron font-semibold mb-4 flex items-center">
+                            <i class="fa fa-equation text-neon mr-2"></i> Prediction Equation
+                        </h3>
+                        <div class="bg-dark p-5 rounded-lg text-center border border-neon/20 relative">
+                            <div class="absolute -top-2 -right-2 w-6 h-6 bg-neon rounded-full flex items-center justify-center text-xs">
+                                R²=0.998
+                            </div>
+                            <p class="font-mono text-lg" id="equation-text">
+                                ζ = 110.32 - 21.05C + 12.56A - 9.23B - 1.18E
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-xl font-orbitron font-semibold mb-4 flex items-center">
+                            <i class="fa fa-pie-chart text-neon mr-2"></i> Feature Contributions
+                        </h3>
+                        <canvas id="contribution-chart" height="250"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 模型解释区 -->
+        <section id="model" class="bg-dark-light rounded-2xl p-6 md:p-8 card-hover neon-border mb-16">
+            <h2 class="text-2xl font-orbitron font-semibold mb-6 flex items-center">
+                <i class="fa fa-info-circle text-neon mr-3"></i> Model Explanation
+            </h2>
+            
+            <div class="space-y-6" id="explanation-content">
+                <p class="text-gray-300 leading-relaxed">
+                    This predictive tool utilizes a multivariate linear regression model developed to quantify the influence of molecular features on the zeta potential of lanthanide metal-organic frameworks (Ln-MOFs). The model integrates four key structural descriptors to enable precise predictions:
+                </p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-dark p-5 rounded-lg border border-neon/20 relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-neon"></div>
+                        <h4 class="font-orbitron font-medium text-neon mb-3 flex items-center">
+                            <i class="fa fa-minus-square text-neon/70 mr-2"></i> Carboxyl Groups (C)
+                        </h4>
+                        <p class="text-gray-400 text-sm">
+                            Each carboxyl group contributes to a more negative zeta potential due to deprotonation at neutral pH, with a regression coefficient of <span class="text-neon">-21.05</span>.
+                        </p>
+                    </div>
+                    <div class="bg-dark p-5 rounded-lg border border-neon/20 relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-neon"></div>
+                        <h4 class="font-orbitron font-medium text-neon mb-3 flex items-center">
+                            <i class="fa fa-plus-square text-neon/70 mr-2"></i> Amino Groups (A)
+                        </h4>
+                        <p class="text-gray-400 text-sm">
+                            Protonated amino groups increase positive surface charge, with a regression coefficient of <span class="text-neon">+12.56</span>, counteracting negative carboxyl effects.
+                        </p>
+                    </div>
+                    <div class="bg-dark p-5 rounded-lg border border-neon/20 relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-neon"></div>
+                        <h4 class="font-orbitron font-medium text-neon mb-3 flex items-center">
+                            <i class="fa fa-circle-o text-neon/70 mr-2"></i> Benzene Rings (B)
+                        </h4>
+                        <p class="text-gray-400 text-sm">
+                            Aromatic conjugation reduces surface charge density by delocalizing electron density, with a coefficient of <span class="text-neon">-9.23</span>.
+                        </p>
+                    </div>
+                    <div class="bg-dark p-5 rounded-lg border border-neon/20 relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-neon"></div>
+                        <h4 class="font-orbitron font-medium text-neon mb-3 flex items-center">
+                            <i class="fa fa-bolt text-neon/70 mr-2"></i> ESP Difference (E)
+                        </h4>
+                        <p class="text-gray-400 text-sm">
+                            A smaller electrostatic potential difference indicates uniform charge distribution, correlating with higher zeta potential (coefficient <span class="text-neon">-1.18</span>).
+                        </p>
+                    </div>
+                </div>
+                
+                <p class="text-gray-300 leading-relaxed">
+                    The model was trained on four ligands (Eu-BDC-NH₂, Eu-BDC, Eu-TPTC, Eu-QPTC) and validated with ligands PTC and BPTC, demonstrating exceptional accuracy with R² values of 0.998 (training) and 0.999 (validation), and a root mean squared error (RMSE) of 0.06 mV.
+                </p>
+            </div>
+        </section>
+
+        <!-- 示例MOF区 -->
+        <section class="bg-dark-light rounded-2xl p-6 md:p-8 card-hover neon-border">
+            <h2 class="text-2xl font-orbitron font-semibold mb-6 flex items-center">
+                <i class="fa fa-lightbulb-o text-neon mr-3"></i> Example MOFs
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="examples-grid">
+                <!-- 示例1 -->
+                <div class="bg-dark rounded-lg p-5 border border-neon/10 hover:border-neon/30 transition-all duration-300 group relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-neon opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <h3 class="font-orbitron font-medium text-neon mb-3 group-hover:text-neon/80 transition-colors">Eu-BDC-NH₂</h3>
+                    <ul class="text-sm space-y-2 text-gray-400">
+                        <li class="flex justify-between"><span>C:</span> <span>2</span></li>
+                        <li class="flex justify-between"><span>A:</span> <span>1</span></li>
+                        <li class="flex justify-between"><span>B:</span> <span>1</span></li>
+                        <li class="flex justify-between"><span>E:</span> <span>7.12 eV</span></li>
+                        <li class="flex justify-between mt-3"><span class="text-neon">ζ:</span> <span>+2.5 mV</span></li>
+                    </ul>
+                    <button class="mt-4 w-full text-sm text-neon hover:bg-neon/10 py-2 rounded-lg transition-colors duration-200 example-btn" data-c="2" data-a="1" data-b="1" data-e="7.12">
+                        <i class="fa fa-arrow-right mr-1"></i> Load Example
+                    </button>
+                </div>
+                
+                <!-- 示例2 -->
+                <div class="bg-dark rounded-lg p-5 border border-neon/10 hover:border-neon/30 transition-all duration-300 group relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-neon opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <h3 class="font-orbitron font-medium text-neon mb-3 group-hover:text-neon/80 transition-colors">Eu-TPTC</h3>
+                    <ul class="text-sm space-y-2 text-gray-400">
+                        <li class="flex justify-between"><span>C:</span> <span>4</span></li>
+                        <li class="flex justify-between"><span>A:</span> <span>0</span></li>
+                        <li class="flex justify-between"><span>B:</span> <span>3</span></li>
+                        <li class="flex justify-between"><span>E:</span> <span>8.23 eV</span></li>
+                        <li class="flex justify-between mt-3"><span class="text-neon">ζ:</span> <span>-25.5 mV</span></li>
+                    </ul>
+                    <button class="mt-4 w-full text-sm text-neon hover:bg-neon/10 py-2 rounded-lg transition-colors duration-200 example-btn" data-c="4" data-a="0" data-b="3" data-e="8.23">
+                        <i class="fa fa-arrow-right mr-1"></i> Load Example
+                    </button>
+                </div>
+                
+                <!-- 示例3 -->
+                <div class="bg-dark rounded-lg p-5 border border-neon/10 hover:border-neon/30 transition-all duration-300 group relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-neon opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <h3 class="font-orbitron font-medium text-neon mb-3 group-hover:text-neon/80 transition-colors">Eu-BPTC</h3>
+                    <ul class="text-sm space-y-2 text-gray-400">
+                        <li class="flex justify-between"><span>C:</span> <span>4</span></li>
+                        <li class="flex justify-between"><span>A:</span> <span>0</span></li>
+                        <li class="flex justify-between"><span>B:</span> <span>2</span></li>
+                        <li class="flex justify-between"><span>E:</span> <span>7.95 eV</span></li>
+                        <li class="flex justify-between mt-3"><span class="text-neon">ζ:</span> <span>-20.31 mV</span></li>
+                    </ul>
+                    <button class="mt-4 w-full text-sm text-neon hover:bg-neon/10 py-2 rounded-lg transition-colors duration-200 example-btn" data-c="4" data-a="0" data-b="2" data-e="7.95">
+                        <i class="fa fa-arrow-right mr-1"></i> Load Example
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-dark-light border-t border-neon/10 py-12">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div>
+                    <div class="flex items-center space-x-2 mb-6">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center">
+                            <i class="fa fa-flask text-neon text-sm"></i>
+                        </div>
+                        <h3 class="text-xl font-orbitron font-semibold text-white">MOFZeta</h3>
+                    </div>
+                    <p class="text-gray-400 text-sm mb-6">
+                        Advanced computational tool for predicting zeta potential of lanthanide metal-organic frameworks
+                    </p>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-neon/60 hover:text-neon transition-colors duration-200 group">
+                            <i class="fa fa-github text-lg group-hover:rotate-12 transition-transform duration-300"></i>
+                        </a>
+                        <a href="#" class="text-neon/60 hover:text-neon transition-colors duration-200 group">
+                            <i class="fa fa-twitter text-lg group-hover:rotate-12 transition-transform duration-300"></i>
+                        </a>
+                        <a href="#" class="text-neon/60 hover:text-neon transition-colors duration-200 group">
+                            <i class="fa fa-envelope text-lg group-hover:rotate-12 transition-transform duration-300"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <div>
+                    <h4 class="font-orbitron font-medium text-neon mb-6">Quick Links</h4>
+                    <ul class="space-y-3 text-gray-400 text-sm">
+                        <li><a href="#hero" class="hover:text-neon transition-colors duration-200">Home</a></li>
+                        <li><a href="#calculator" class="hover:text-neon transition-colors duration-200">Calculator</a></li>
+                        <li><a href="#model" class="hover:text-neon transition-colors duration-200">Model Explanation</a></li>
+                        <li><a href="#" class="hover:text-neon transition-colors duration-200">Publications</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-orbitron font-medium text-neon mb-6">References</h4>
+                    <ul class="space-y-3 text-gray-400 text-sm">
+                        <li>1. <a href="#" class="hover:text-neon transition-colors duration-200">Rational Design of Dual-Emission Lanthanide Metal–Organic Framework...</a></li>
+                        <li>2. <a href="#" class="hover:text-neon transition-colors duration-200">Tunable Fluorescent Artificial Receptor Biosensor Based on...</a></li>
+                        <li>3. <a href="#" class="hover:text-neon transition-colors duration-200">In Revision</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-orbitron font-medium text-neon mb-6">Contact</h4>
+                    <ul class="space-y-3 text-gray-400 text-sm">
+                        <li class="flex items-start">
+                            <i class="fa fa-envelope text-neon/60 mt-1 mr-2"></i>
+                            <a href="mailto:2017203060026@whu.edu.cn" class="hover:text-neon transition-colors duration-200">Long Yu</a>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa fa-envelope text-neon/60 mt-1 mr-2"></i>
+                            <a href="mailto:yuxiuxiao2011@whu.edu.cn" class="hover:text-neon transition-colors duration-200">Yuxiu Xiao</a>
+                        </li>
+                        <li class="flex items-start mt-4">
+                            <i class="fa fa-university text-neon/60 mt-1 mr-2"></i>
+                            <span>Wuhan University, China</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="border-t border-neon/10 mt-10 pt-8 text-center text-gray-500 text-sm">
+                &copy; 2025 MOFZeta Project. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // 存储计算状态的对象
+        const calculationState = {
+            carboxyl: 0,
+            amino: 0,
+            benzene: 0,
+            esp: 0,
+            zeta: 0,
+            interpretation: 'Neutral Surface'
+        };
+
+        // Zeta电势计算函数
+        function calculateZeta(carboxyl, amino, benzene, esp) {
+            return 110.32 - (21.05 * carboxyl) + (12.56 * amino) - (9.23 * benzene) - (1.18 * esp);
+        }
+        
+        // 更新贡献图表函数
+        let contributionChart;
+        function updateContributionChart(carboxyl, amino, benzene, esp, zeta) {
+            const intercept = 110.32;
+            const carboxylContribution = -21.05 * carboxyl;
+            const aminoContribution = 12.56 * amino;
+            const benzeneContribution = -9.23 * benzene;
+            const espContribution = -1.18 * esp;
+            
+            const ctx = document.getElementById('contribution-chart').getContext('2d');
+            
+            // 销毁现有图表（如果存在）
+            if (contributionChart) {
+                contributionChart.destroy();
+            }
+            
+            // 创建新图表
+            contributionChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['截距项', '羧基 (C)', '氨基 (A)', '苯环 (B)', 'ESP (E)', '总计'],
+                    datasets: [{
+                        label: '贡献值 (mV)',
+                        data: [
+                            intercept, 
+                            carboxylContribution, 
+                            aminoContribution, 
+                            benzeneContribution, 
+                            espContribution, 
+                            zeta
+                        ],
+                        backgroundColor: [
+                            'rgba(99, 102, 241, 0.3)',    // 主色用于截距项
+                            'rgba(236, 72, 153, 0.3)',   // 强调色用于羧基（负贡献）
+                            'rgba(6, 182, 212, 0.5)',    // 辅助色用于氨基（正贡献）
+                            'rgba(99, 102, 241, 0.2)',   // 主色变体用于苯环（负贡献）
+                            'rgba(236, 72, 153, 0.2)',   // 强调色变体用于ESP（负贡献）
+                            'rgba(99, 102, 241, 0.7)'    // 主色用于总计
+                        ],
+                        borderColor: [
+                            'rgba(99, 102, 241, 0.7)',
+                            'rgba(236, 72, 153, 0.7)',
+                            'rgba(6, 182, 212, 0.9)',
+                            'rgba(99, 102, 241, 0.5)',
+                            'rgba(236, 72, 153, 0.5)',
+                            'rgba(99, 102, 241, 1)'
+                        ],
+                        borderWidth: 1,
+                        borderSkipped: false,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            titleColor: '#818CF8',
+                            bodyColor: '#fff',
+                            borderColor: 'rgba(129, 140, 248, 0.3)',
+                            borderWidth: 1,
+                            padding: 12,
+                            cornerRadius: 8,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    let value = context.raw;
+                                    return value.toFixed(2) + ' mV';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                color: 'rgba(129, 140, 248, 0.05)'
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.7)',
+                                callback: function(value) {
+                                    return value + ' mV';
+                                }
+                            },
+                            border: {
+                                color: 'rgba(129, 140, 248, 0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.7)'
+                            },
+                            border: {
+                                display: false
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 1200,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        }
+        
+        // 表单提交处理函数
+        document.getElementById('zeta-calculator').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // 获取输入值
+            const carboxyl = parseFloat(document.getElementById('carboxyl').value);
+            const amino = parseFloat(document.getElementById('amino').value);
+            const benzene = parseFloat(document.getElementById('benzene').value);
+            const esp = parseFloat(document.getElementById('esp').value);
+            
+            // 计算Zeta电势
+            const zeta = calculateZeta(carboxyl, amino, benzene, esp);
+            
+            // 更新计算状态
+            calculationState.carboxyl = carboxyl;
+            calculationState.amino = amino;
+            calculationState.benzene = benzene;
+            calculationState.esp = esp;
+            calculationState.zeta = zeta;
+            
+            // 更新结果显示
+            document.getElementById('result-placeholder').classList.add('hidden');
+            document.getElementById('result-content').classList.remove('hidden');
+            
+            // 格式化Zeta值并添加动画效果
+            const zetaElement = document.getElementById('zeta-value');
+            zetaElement.style.opacity = '0';
+            zetaElement.style.transform = 'scale(0.8)';
+            
+            const formattedZeta = zeta >= 0 ? `+${zeta.toFixed(2)} mV` : `${zeta.toFixed(2)} mV`;
+            setTimeout(() => {
+                zetaElement.textContent = formattedZeta;
+                zetaElement.style.transition = 'all 0.5s ease-out';
+                zetaElement.style.opacity = '1';
+                zetaElement.style.transform = 'scale(1)';
+            }, 100);
+            
+            // 根据Zeta值更新解释
+            let interpretation;
+            if (zeta > 10) {
+                interpretation = 'Positively Charged Surface';
+                calculationState.interpretation = interpretation;
+            } else if (zeta < -10) {
+                interpretation = 'Negatively Charged Surface';
+                calculationState.interpretation = interpretation;
+            } else {
+                interpretation = 'Near Neutral Surface';
+                calculationState.interpretation = interpretation;
+            }
+            
+            const interpretationElement = document.getElementById('result-interpretation');
+            interpretationElement.style.color = zeta > 10 ? '#06B6D4' : zeta < -10 ? '#EC4899' : '#818CF8';
+            interpretationElement.textContent = interpretation;
+            
+            // 更新贡献图表
+            updateContributionChart(carboxyl, amino, benzene, esp, zeta);
+            
+            // 滚动到结果区域并添加动画
+            document.getElementById('results-card').scrollIntoView({ 
+                behavior: 'smooth',
+                block: 'start'
+            });
+        });
+        
+        // 示例按钮处理函数
+        document.querySelectorAll('.example-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const c = parseFloat(this.dataset.c);
+                const a = parseFloat(this.dataset.a);
+                const b = parseFloat(this.dataset.b);
+                const e = parseFloat(this.dataset.e);
+                
+                // 为输入字段添加动画
+                const inputs = [
+                    document.getElementById('carboxyl'),
+                    document.getElementById('amino'),
+                    document.getElementById('benzene'),
+                    document.getElementById('esp')
+                ];
+                
+                inputs.forEach(input => {
+                    input.classList.add('border-neon', 'bg-neon/5');
+                    input.value = '';
+                });
+                
+                setTimeout(() => {
+                    document.getElementById('carboxyl').value = c;
+                    document.getElementById('amino').value = a;
+                    document.getElementById('benzene').value = b;
+                    document.getElementById('esp').value = e;
+                    
+                    inputs.forEach(input => {
+                        input.classList.remove('border-neon', 'bg-neon/5');
+                    });
+                    
+                    // 自动提交表单
+                    document.getElementById('zeta-calculator').dispatchEvent(new Event('submit'));
+                    
+                    // 滚动到表单区域
+                    document.getElementById('zeta-calculator').scrollIntoView({ 
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }, 300);
+            });
+        });
+        
+        // 导航栏滚动效果
+        window.addEventListener('scroll', function() {
+            const navbar = document.getElementById('navbar');
+            if (window.scrollY > 50) {
+                navbar.classList.add('py-2');
+                navbar.classList.remove('py-4');
+            } else {
+                navbar.classList.add('py-4');
+                navbar.classList.remove('py-2');
+            }
+        });
+        
+        // 粒子背景初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            particlesJS('particles-js', {
+                "particles": {
+                    "number": {
+                        "value": 100,
+                        "density": {
+                            "enable": true,
+                            "value_area": 1000
+                        }
+                    },
+                    "color": {
+                        "value": "#818CF8"
+                    },
+                    "shape": {
+                        "type": "circle"
+                    },
+                    "opacity": {
+                        "value": 0.6,
+                        "random": true
+                    },
+                    "size": {
+                        "value": 2,
+                        "random": true
+                    },
+                    "line_linked": {
+                        "enable": true,
+                        "distance": 180,
+                        "color": "#818CF8",
+                        "opacity": 0.15,
+                        "width": 1
+                    },
+                    "move": {
+                        "enable": true,
+                        "speed": 1,
+                        "direction": "none",
+                        "random": true,
+                        "straight": false,
+                        "out_mode": "out",
+                        "bounce": false
+                    }
+                },
+                "interactivity": {
+                    "detect_on": "canvas",
+                    "events": {
+                        "onhover": {
+                            "enable": true,
+                            "mode": "grab"
+                        },
+                        "onclick": {
+                            "enable": true,
+                            "mode": "push"
+                        },
+                        "resize": true
+                    },
+                    "modes": {
+                        "grab": {
+                            "distance": 160,
+                            "line_linked": {
+                                "opacity": 0.3
+                            }
+                        },
+                        "push": {
+                            "particles_nb": 3
+                        }
+                    }
+                },
+                "retina_detect": true
+            });
+        });
+    </script>
+</body>
+</html>
